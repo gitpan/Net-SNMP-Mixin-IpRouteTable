@@ -2,7 +2,7 @@ NAME
     Net::SNMP::Mixin::IpRouteTable - mixin class for the mib-II ipRouteTable
 
 VERSION
-    Version 0.01_01
+    Version 0.02
 
 SYNOPSIS
       use Net::SNMP;

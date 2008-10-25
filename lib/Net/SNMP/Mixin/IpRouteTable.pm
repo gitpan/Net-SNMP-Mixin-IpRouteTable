@@ -58,11 +58,11 @@ Net::SNMP::Mixin::IpRouteTable - mixin class for the mib-II ipRouteTable
 
 =head1 VERSION
 
-Version 0.01_01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01_01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
