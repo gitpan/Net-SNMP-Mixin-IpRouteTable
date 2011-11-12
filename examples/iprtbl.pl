@@ -101,10 +101,6 @@ exit 0;
 sub print_iprtbl {
   my $session = shift;
 
-  my @iprtbl = $session->get_ip_route_entries();
-
-  my %routes = map { $_->{ipRouteDest} => $_ } @iprtbl;
-
   print "\n";
   printf "Hostname: %-15.15s\n", $session->hostname;
 
@@ -113,13 +109,16 @@ sub print_iprtbl {
     'Proto', 'Type', 'Metric1';
   print '-' x 66, "\n";
 
-  foreach my $dest ( oid_lex_sort( keys %routes ) ) {
-    my $mask      = $routes{$dest}{ipRouteMask};
+  my @routes = $session->get_ip_route_table();
+
+  foreach my $route ( @routes ) {
+    my $dest      = $route->{ipRouteDest};
+    my $mask      = $route->{ipRouteMask};
     my $bits      = mk_bits($mask);
-    my $nhop      = $routes{$dest}{ipRouteNextHop};
-    my $proto_str = $routes{$dest}{ipRouteProtoString};
-    my $type_str  = $routes{$dest}{ipRouteTypeString};
-    my $metric1   = $routes{$dest}{ipRouteMetric1};
+    my $nhop      = $route->{ipRouteNextHop};
+    my $proto_str = $route->{ipRouteProtoString};
+    my $type_str  = $route->{ipRouteTypeString};
+    my $metric1   = $route->{ipRouteMetric1};
 
     printf "%-18s => %-15s %8s %10s %8s\n", "$dest/$bits", $nhop,
       $proto_str, $type_str, $metric1;

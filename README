@@ -2,7 +2,7 @@ NAME
     Net::SNMP::Mixin::IpRouteTable - mixin class for the mib-II ipRouteTable
 
 VERSION
-    Version 0.02
+    Version 0.03
 
 SYNOPSIS
       use Net::SNMP;
@@ -18,13 +18,15 @@ SYNOPSIS
 
       die $session->errors if $session->errors;
 
-      foreach my $rt_entry ( $session->get_ip_route_entries ) {
+      my @routes = get_ip_route_table();
 
-        my $dest      = $rt_entry->{ipRouteDest};
-        my $mask      = $rt_entry->{ipRouteMask};
-        my $nhop      = $rt_entry->{ipRouteNextHop};
-        my $proto_str = $rt_entry->{ipRouteProtoString};
-        my $type_str  = $rt_entry->{ipRouteTypeString};
+      foreach my $route ( @routes ) {
+
+        my $dest      = $route->{ipRouteDest};
+        my $mask      = $route->{ipRouteMask};
+        my $nhop      = $route->{ipRouteNextHop};
+        my $proto_str = $route->{ipRouteProtoString};
+        my $type_str  = $route->{ipRouteTypeString};
 
         print "$dest/$mask => $nhop $proto_str $type_str\n";
       }
@@ -33,8 +35,8 @@ DESCRIPTION
     A Net::SNMP mixin class for mib-II ipRouteTable info.
 
 MIXIN METHODS
-  OBJ->get_ip_route_entries()
-    Returns a list of mib-II ipRouteTable entries. Every list element is a
+  OBJ->get_ip_route_table()
+    Returns the mib-II ipRouteTable as a list. Every route entry is a
     reference to a hash with the following fields and values:
 
       {
@@ -92,7 +94,7 @@ AUTHOR
     Karl Gaissmaier <karl.gaissmaier at uni-ulm.de>
 
 COPYRIGHT & LICENSE
-    Copyright 2008 Karl Gaissmaier, all rights reserved.
+    Copyright 2008-2011 Karl Gaissmaier, all rights reserved.
 
     This program is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.

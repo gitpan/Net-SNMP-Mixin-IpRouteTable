@@ -1,5 +1,10 @@
 Revision history for Net-SNMP-Mixin-IpRouteTable
 
+0.03	Sat, 12 Nov 2011 23:02:08 +0100
+	* ATTENTION: Incompatible interface changes!
+	# return route table in oid lex sort order
+	* fixed LICENSE
+
 0.02	Sat Oct 25 15:30:09 MEST 2008
 	First production release
 

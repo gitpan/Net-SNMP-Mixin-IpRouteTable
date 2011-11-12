@@ -18,8 +18,8 @@ plan tests => 8;
 is( Net::SNMP->mixer('Net::SNMP::Mixin::IpRouteTable'),
   'Net::SNMP', 'mixer returns the class name' );
 ok(
-  Net::SNMP->can('get_ip_route_entries'),
-  'get_ip_route_entries() is now a class method'
+  Net::SNMP->can('get_ip_route_table'),
+  'get_ip_route_table() is now a class method'
 );
 
 eval {Net::SNMP->mixer('Net::SNMP::Mixin::IpRouteTable')};
@@ -34,9 +34,9 @@ isa_ok( $session, 'Net::SNMP' );
 eval {$session->mixer("Net::SNMP::Mixin::IpRouteTable")};
 like( $@, qr/already mixed into/, 'mixed in twice is an error' );
 
-ok( $session->can('get_ip_route_entries'), '$session can get_ip_route_entries' );
+ok( $session->can('get_ip_route_table'), '$session can get_ip_route_table' );
 
-eval {$session->get_ip_route_entries};
+eval {$session->get_ip_route_table};
 like( $@, qr/not initialized/i, 'not initialized' );
 
 

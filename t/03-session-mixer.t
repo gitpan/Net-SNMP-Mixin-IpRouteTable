@@ -23,7 +23,7 @@ isa_ok( $session, 'Net::SNMP' );
 
 eval { $session->mixer("Net::SNMP::Mixin::IpRouteTable") };
 is( $@, '', 'Net::SNMP::Mixin::IpRouteTable mixed in successful' );
-ok( $session->can('get_ip_route_entries'), '$session can get_ip_route_entries' );
+ok( $session->can('get_ip_route_table'), '$session can get_ip_route_table' );
 
 # try to mixin twice
 eval { $session->mixer("Net::SNMP::Mixin::IpRouteTable") };

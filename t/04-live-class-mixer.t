@@ -37,8 +37,8 @@ SKIP: {
 
   ok( !$error, 'got snmp session for live tests' );
   isa_ok( $session, 'Net::SNMP' );
-  ok( $session->can('get_ip_route_entries'),
-    'can $session->get_ip_route_entries' );
+  ok( $session->can('get_ip_route_table'),
+    'can $session->get_ip_route_table' );
 
   eval { $session->init_mixins };
   ok( !$@, 'init_mixins successful' );
@@ -54,8 +54,8 @@ SKIP: {
   );
 
   my $ip_route_table;
-  eval { $ip_route_table = $session->get_ip_route_entries };
-  ok( !$@, 'get_ip_route_entries' );
+  eval { $ip_route_table = $session->get_ip_route_table };
+  ok( !$@, 'get_ip_route_table' );
 }
 
 # vim: ft=perl sw=2

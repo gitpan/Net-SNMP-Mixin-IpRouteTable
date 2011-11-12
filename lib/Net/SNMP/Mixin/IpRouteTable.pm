@@ -14,6 +14,7 @@ my $prefix = __PACKAGE__;
 # this module import config
 #
 use Carp ();
+use Net::SNMP qw/oid_lex_sort/;
 use Net::SNMP::Mixin::Util qw/idx2val push_error/;
 
 #
@@ -22,12 +23,12 @@ use Net::SNMP::Mixin::Util qw/idx2val push_error/;
 my @mixin_methods;
 
 BEGIN {
-  @mixin_methods = ( qw/ get_ip_route_entries /);
+    @mixin_methods = (qw/ get_ip_route_table /);
 }
 
 use Sub::Exporter -setup => {
-  exports   => [@mixin_methods],
-  groups    => { default => [@mixin_methods], },
+    exports => [@mixin_methods],
+    groups  => { default => [@mixin_methods], },
 };
 
 #
@@ -35,22 +36,52 @@ use Sub::Exporter -setup => {
 #
 # from mib-II
 use constant {
-  IP_ROUTE_TABLE => '1.3.6.1.2.1.4.21',
+    IP_ROUTE_TABLE => '1.3.6.1.2.1.4.21',
 
-  IP_ROUTE_DEST    => '1.3.6.1.2.1.4.21.1.1',
-  IP_ROUTE_IFINDEX => '1.3.6.1.2.1.4.21.1.2',
-  IP_ROUTE_METRIC1 => '1.3.6.1.2.1.4.21.1.3',
-  IP_ROUTE_METRIC2 => '1.3.6.1.2.1.4.21.1.4',
-  IP_ROUTE_METRIC3 => '1.3.6.1.2.1.4.21.1.5',
-  IP_ROUTE_METRIC4 => '1.3.6.1.2.1.4.21.1.6',
-  IP_ROUTE_NEXTHOP => '1.3.6.1.2.1.4.21.1.7',
-  IP_ROUTE_TYPE    => '1.3.6.1.2.1.4.21.1.8',
-  IP_ROUTE_PROTO   => '1.3.6.1.2.1.4.21.1.9',
-  IP_ROUTE_AGE     => '1.3.6.1.2.1.4.21.1.10',
-  IP_ROUTE_MASK    => '1.3.6.1.2.1.4.21.1.11',
-  IP_ROUTE_METRIC5 => '1.3.6.1.2.1.4.21.1.12',
-  IP_ROUTE_INFO    => '1.3.6.1.2.1.4.21.1.13',
+    IP_ROUTE_DEST    => '1.3.6.1.2.1.4.21.1.1',
+    IP_ROUTE_IFINDEX => '1.3.6.1.2.1.4.21.1.2',
+    IP_ROUTE_METRIC1 => '1.3.6.1.2.1.4.21.1.3',
+    IP_ROUTE_METRIC2 => '1.3.6.1.2.1.4.21.1.4',
+    IP_ROUTE_METRIC3 => '1.3.6.1.2.1.4.21.1.5',
+    IP_ROUTE_METRIC4 => '1.3.6.1.2.1.4.21.1.6',
+    IP_ROUTE_NEXTHOP => '1.3.6.1.2.1.4.21.1.7',
+    IP_ROUTE_TYPE    => '1.3.6.1.2.1.4.21.1.8',
+    IP_ROUTE_PROTO   => '1.3.6.1.2.1.4.21.1.9',
+    IP_ROUTE_AGE     => '1.3.6.1.2.1.4.21.1.10',
+    IP_ROUTE_MASK    => '1.3.6.1.2.1.4.21.1.11',
+    IP_ROUTE_METRIC5 => '1.3.6.1.2.1.4.21.1.12',
+    IP_ROUTE_INFO    => '1.3.6.1.2.1.4.21.1.13',
 };
+
+#
+# the ipRouteType enum
+#
+my %ip_route_type_enum = (
+    1 => 'other',
+    2 => 'invalid',
+    3 => 'direct',
+    4 => 'indirect',
+);
+
+#
+# the ipRouteProto enum
+#
+my %ip_route_proto_enum = (
+    1  => 'other',
+    2  => 'local',
+    3  => 'netmgmt',
+    4  => 'icmp',
+    5  => 'egp',
+    6  => 'ggp',
+    7  => 'hello',
+    8  => 'rip',
+    9  => 'is-is',
+    10 => 'es-is',
+    11 => 'ciscoIgrp',
+    12 => 'bbnSpfIgp',
+    13 => 'ospf',
+    14 => 'bgp',
+);
 
 =head1 NAME
 
@@ -58,11 +89,11 @@ Net::SNMP::Mixin::IpRouteTable - mixin class for the mib-II ipRouteTable
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -79,13 +110,15 @@ our $VERSION = '0.02';
 
   die $session->errors if $session->errors;
 
-  foreach my $rt_entry ( $session->get_ip_route_entries ) {
+  my @routes = get_ip_route_table();
 
-    my $dest      = $rt_entry->{ipRouteDest};
-    my $mask      = $rt_entry->{ipRouteMask};
-    my $nhop      = $rt_entry->{ipRouteNextHop};
-    my $proto_str = $rt_entry->{ipRouteProtoString};
-    my $type_str  = $rt_entry->{ipRouteTypeString};
+  foreach my $route ( @routes ) {
+
+    my $dest      = $route->{ipRouteDest};
+    my $mask      = $route->{ipRouteMask};
+    my $nhop      = $route->{ipRouteNextHop};
+    my $proto_str = $route->{ipRouteProtoString};
+    my $type_str  = $route->{ipRouteTypeString};
 
     print "$dest/$mask => $nhop $proto_str $type_str\n";
   }
@@ -96,9 +129,9 @@ A Net::SNMP mixin class for mib-II ipRouteTable info.
 
 =head1 MIXIN METHODS
 
-=head2 B<< OBJ->get_ip_route_entries() >>
+=head2 B<< OBJ->get_ip_route_table() >>
 
-Returns a list of mib-II ipRouteTable entries. Every list element is a reference to a hash with the following fields and values:
+Returns the mib-II ipRouteTable as a list. Every route entry is a reference to a hash with the following fields and values:
 
   {
     ipRouteDest       => IpAddress,
@@ -120,91 +153,65 @@ Returns a list of mib-II ipRouteTable entries. Every list element is a reference
 
 =cut
 
-sub get_ip_route_entries {
-  my $session = shift;
-  Carp::croak "'$prefix' not initialized,"
-    unless $session->{$prefix}{__initialized};
+sub get_ip_route_table {
+    my $session = shift;
+    Carp::croak "'$prefix' not initialized,"
+      unless $session->{$prefix}{__initialized};
 
-  #
-  # the ipRouteType enum 
-  #
-  my %ip_route_type_enum = (
-    1 => 'other',
-    2 => 'invalid',
-    3 => 'direct',
-    4 => 'indirect',
-  );
+    # stash for return values
+    my @route_tbl;
 
-  #
-  # the ipRouteProto enum 
-  #
-  my %ip_route_proto_enum = (
-    1  => 'other',
-    2  => 'local',
-    3  => 'netmgmt',
-    4  => 'icmp',
-    5  => 'egp',
-    6  => 'ggp',
-    7  => 'hello',
-    8  => 'rip',
-    9  => 'is-is',
-    10 => 'es-is',
-    11 => 'ciscoIgrp',
-    12 => 'bbnSpfIgp',
-    13 => 'ospf',
-    14 => 'bgp',
-  );
+    my (
+        $ipRouteDest,        $ipRouteMask,       $ipRouteNextHop,
+        $ipRouteIfIndex,     $ipRouteMetric1,    $ipRouteMetric2,
+        $ipRouteMetric3,     $ipRouteMetric4,    $ipRouteMetric5,
+        $ipRouteType,        $ipRouteTypeString, $ipRouteProto,
+        $ipRouteProtoString, $ipRouteAge,        $ipRouteInfo,
+    );
 
-  # stash for return values
-  my @route_entries = ();
+    # index is ipRouteDest
+    foreach
+      my $idx ( oid_lex_sort keys %{ $session->{$prefix}{ipRouteDest} } )
+    {
 
-  my (
-    $ipRouteDest,        $ipRouteMask,       $ipRouteNextHop,
-    $ipRouteIfIndex,     $ipRouteMetric1,    $ipRouteMetric2,
-    $ipRouteMetric3,     $ipRouteMetric4,    $ipRouteMetric5,
-    $ipRouteType,        $ipRouteTypeString, $ipRouteProto,
-    $ipRouteProtoString, $ipRouteAge,        $ipRouteInfo,
-  );
+        $ipRouteDest        = $session->{$prefix}{ipRouteDest}{$idx};
+        $ipRouteMask        = $session->{$prefix}{ipRouteMask}{$idx};
+        $ipRouteNextHop     = $session->{$prefix}{ipRouteNextHop}{$idx};
+        $ipRouteIfIndex     = $session->{$prefix}{ipRouteIfIndex}{$idx};
+        $ipRouteMetric1     = $session->{$prefix}{ipRouteMetric1}{$idx};
+        $ipRouteMetric2     = $session->{$prefix}{ipRouteMetric2}{$idx};
+        $ipRouteMetric3     = $session->{$prefix}{ipRouteMetric3}{$idx};
+        $ipRouteMetric4     = $session->{$prefix}{ipRouteMetric4}{$idx};
+        $ipRouteMetric5     = $session->{$prefix}{ipRouteMetric5}{$idx};
+        $ipRouteType        = $session->{$prefix}{ipRouteType}{$idx} || -1;
+        $ipRouteTypeString  = $ip_route_type_enum{$ipRouteType} || 'unknown';
+        $ipRouteProto       = $session->{$prefix}{ipRouteProto}{$idx} || -1;
+        $ipRouteProtoString = $ip_route_proto_enum{$ipRouteProto}
+          || 'unknown';
+        $ipRouteAge  = $session->{$prefix}{ipRouteAge}{$idx};
+        $ipRouteInfo = $session->{$prefix}{ipRouteInfo}{$idx};
 
-  # index is ipRouteDest
-  foreach my $idx ( keys %{ $session->{$prefix}{ipRouteIfIndex} } ) {
-    $ipRouteDest        = $idx;
-    $ipRouteMask        = $session->{$prefix}{ipRouteMask}{$idx};
-    $ipRouteNextHop     = $session->{$prefix}{ipRouteNextHop}{$idx};
-    $ipRouteIfIndex     = $session->{$prefix}{ipRouteIfIndex}{$idx};
-    $ipRouteMetric1     = $session->{$prefix}{ipRouteMetric1}{$idx};
-    $ipRouteMetric2     = $session->{$prefix}{ipRouteMetric2}{$idx};
-    $ipRouteMetric3     = $session->{$prefix}{ipRouteMetric3}{$idx};
-    $ipRouteMetric4     = $session->{$prefix}{ipRouteMetric4}{$idx};
-    $ipRouteMetric5     = $session->{$prefix}{ipRouteMetric5}{$idx};
-    $ipRouteType        = $session->{$prefix}{ipRouteType}{$idx} || -1;
-    $ipRouteTypeString  = $ip_route_type_enum{$ipRouteType} || 'unknown';
-    $ipRouteProto       = $session->{$prefix}{ipRouteProto}{$idx} || -1;
-    $ipRouteProtoString = $ip_route_proto_enum{$ipRouteProto} || 'unknown';
-    $ipRouteAge         = $session->{$prefix}{ipRouteAge}{$idx};
-    $ipRouteInfo        = $session->{$prefix}{ipRouteInfo}{$idx};
+        push @route_tbl,
+          {
+            ipRouteDest        => $ipRouteDest,
+            ipRouteMask        => $ipRouteMask,
+            ipRouteNextHop     => $ipRouteNextHop,
+            ipRouteIfIndex     => $ipRouteIfIndex,
+            ipRouteMetric1     => $ipRouteMetric1,
+            ipRouteMetric2     => $ipRouteMetric2,
+            ipRouteMetric3     => $ipRouteMetric3,
+            ipRouteMetric4     => $ipRouteMetric4,
+            ipRouteMetric5     => $ipRouteMetric5,
+            ipRouteType        => $ipRouteType,
+            ipRouteTypeString  => $ipRouteTypeString,
+            ipRouteProto       => $ipRouteProto,
+            ipRouteProtoString => $ipRouteProtoString,
+            ipRouteAge         => $ipRouteAge,
+            ipRouteInfo        => $ipRouteInfo,
+          };
+    }
 
-    push @route_entries,
-      {
-      ipRouteDest        => $ipRouteDest,
-      ipRouteMask        => $ipRouteMask,
-      ipRouteNextHop     => $ipRouteNextHop,
-      ipRouteIfIndex     => $ipRouteIfIndex,
-      ipRouteMetric1     => $ipRouteMetric1,
-      ipRouteMetric2     => $ipRouteMetric2,
-      ipRouteMetric3     => $ipRouteMetric3,
-      ipRouteMetric4     => $ipRouteMetric4,
-      ipRouteMetric5     => $ipRouteMetric5,
-      ipRouteType        => $ipRouteType,
-      ipRouteTypeString  => $ipRouteTypeString,
-      ipRouteProto       => $ipRouteProto,
-      ipRouteProtoString => $ipRouteProtoString,
-      ipRouteAge         => $ipRouteAge,
-      ipRouteInfo        => $ipRouteInfo,
-      };
-  }
-
-  return @route_entries;
+    return @route_tbl;
 }
 
 =head1 INITIALIZATION
@@ -216,18 +223,18 @@ Fetch the mib-II ipRouteTable from the host. Don't call this method direct!
 =cut
 
 sub _init {
-  my ($session, $reload) = @_;
+    my ( $session, $reload ) = @_;
 
-  die "$prefix already initalized and reload not forced.\n"
-  	if $session->{$prefix}{__initialized} && not $reload;
+    die "$prefix already initalized and reload not forced.\n"
+      if $session->{$prefix}{__initialized} && not $reload;
 
-  # populate the object with needed mib values
-  #
-  # initialize the object for ipRouteTable infos
-  _fetch_ip_route_tbl($session);
-  return if $session->error;
+    # populate the object with needed mib values
+    #
+    # initialize the object for ipRouteTable infos
+    _fetch_ip_route_tbl($session);
+    return if $session->error;
 
-  return 1;
+    return 1;
 }
 
 =head1 PRIVATE METHODS
@@ -241,32 +248,32 @@ Fetch the ipRouteTable once during object initialization.
 =cut
 
 sub _fetch_ip_route_tbl {
-  my $session = shift;
-  my $result;
+    my $session = shift;
+    my $result;
 
-  # fetch the ipRouteTable
-  $result = $session->get_table(
-    -baseoid => IP_ROUTE_TABLE,
+    # fetch the ipRouteTable
+    $result = $session->get_table(
+        -baseoid => IP_ROUTE_TABLE,
 
-    # define callback if in nonblocking mode
-    $session->nonblocking
-    ? ( -callback => \&_ip_route_tbl_cb ) : (),
-  );
+        # define callback if in nonblocking mode
+        $session->nonblocking ? ( -callback => \&_ip_route_tbl_cb ) : (),
+    );
 
-  unless (defined $result) {
-    # Net::SNMP looses sometimes error messages in nonblocking
-    # mode, so we save them in an extra buffer
-    my $err_msg = $session->error;
-    push_error($session, "$prefix: $err_msg") if $err_msg;
-    return;
-  }
+    unless ( defined $result ) {
 
-  # in nonblocking mode the callback will be called asynchronously
-  return 1 if $session->nonblocking;
+        # Net::SNMP looses sometimes error messages in nonblocking
+        # mode, so we save them in an extra buffer
+        my $err_msg = $session->error;
+        push_error( $session, "$prefix: $err_msg" ) if $err_msg;
+        return;
+    }
 
-  # ok we are in synchronous mode, call the result mangling function
-  # by hand
-  _ip_route_tbl_cb($session);
+    # in nonblocking mode the callback will be called asynchronously
+    return 1 if $session->nonblocking;
+
+    # ok we are in synchronous mode, call the result mangling function
+    # by hand
+    _ip_route_tbl_cb($session);
 
 }
 
@@ -277,63 +284,67 @@ The callback for _fetch_ip_route_tbl().
 =cut
 
 sub _ip_route_tbl_cb {
-  my $session = shift;
-  my $vbl     = $session->var_bind_list;
+    my $session = shift;
+    my $vbl     = $session->var_bind_list;
 
-  unless (defined $vbl) {
-    # Net::SNMP looses sometimes error messages in nonblocking
-    # mode, so we save them in an extra buffer
-    my $err_msg = $session->error;
-    push_error($session, "$prefix: $err_msg") if $err_msg;
-    return;
-  }
+    unless ( defined $vbl ) {
 
-  # mangle result table to get plain idx->value
-  #
-  # result hashes: ipRouteDest => values
-  #
+        # Net::SNMP looses sometimes error messages in nonblocking
+        # mode, so we save them in an extra buffer
+        my $err_msg = $session->error;
+        push_error( $session, "$prefix: $err_msg" ) if $err_msg;
+        return;
+    }
 
-  $session->{$prefix}{ipRouteIfIndex} =
-    idx2val( $vbl, IP_ROUTE_IFINDEX, undef, undef, );
+    # mangle result table to get plain idx->value
+    #
+    # result hashes: ipRouteDest => values
+    #
 
-  $session->{$prefix}{ipRouteMetric1} =
-    idx2val( $vbl, IP_ROUTE_METRIC1, undef, undef, );
+    $session->{$prefix}{ipRouteDest} =
+      idx2val( $vbl, IP_ROUTE_DEST, undef, undef, );
 
-  $session->{$prefix}{ipRouteMetric2} =
-    idx2val( $vbl, IP_ROUTE_METRIC2, undef, undef, );
+    $session->{$prefix}{ipRouteIfIndex} =
+      idx2val( $vbl, IP_ROUTE_IFINDEX, undef, undef, );
 
-  $session->{$prefix}{ipRouteMetric3} =
-    idx2val( $vbl, IP_ROUTE_METRIC3, undef, undef, );
+    $session->{$prefix}{ipRouteMetric1} =
+      idx2val( $vbl, IP_ROUTE_METRIC1, undef, undef, );
 
-  $session->{$prefix}{ipRouteMetric4} =
-    idx2val( $vbl, IP_ROUTE_METRIC4, undef, undef, );
+    $session->{$prefix}{ipRouteMetric2} =
+      idx2val( $vbl, IP_ROUTE_METRIC2, undef, undef, );
 
-  $session->{$prefix}{ipRouteMetric5} =
-    idx2val( $vbl, IP_ROUTE_METRIC5, undef, undef, );
+    $session->{$prefix}{ipRouteMetric3} =
+      idx2val( $vbl, IP_ROUTE_METRIC3, undef, undef, );
 
-  $session->{$prefix}{ipRouteNextHop} =
-    idx2val( $vbl, IP_ROUTE_NEXTHOP, undef, undef, );
+    $session->{$prefix}{ipRouteMetric4} =
+      idx2val( $vbl, IP_ROUTE_METRIC4, undef, undef, );
 
-  $session->{$prefix}{ipRouteType} =
+    $session->{$prefix}{ipRouteMetric5} =
+      idx2val( $vbl, IP_ROUTE_METRIC5, undef, undef, );
+
+    $session->{$prefix}{ipRouteNextHop} =
+      idx2val( $vbl, IP_ROUTE_NEXTHOP, undef, undef, );
+
+    $session->{$prefix}{ipRouteType} =
       idx2val( $vbl, IP_ROUTE_TYPE, undef, undef, );
 
-  $session->{$prefix}{ipRouteProto} =
-    idx2val( $vbl, IP_ROUTE_PROTO, undef, undef, );
+    $session->{$prefix}{ipRouteProto} =
+      idx2val( $vbl, IP_ROUTE_PROTO, undef, undef, );
 
-  $session->{$prefix}{ipRouteAge} =
-    idx2val( $vbl, IP_ROUTE_AGE, undef, undef, );
+    $session->{$prefix}{ipRouteAge} =
+      idx2val( $vbl, IP_ROUTE_AGE, undef, undef, );
 
-  $session->{$prefix}{ipRouteMask} =
-    idx2val( $vbl, IP_ROUTE_MASK, undef, undef, );
+    $session->{$prefix}{ipRouteMask} =
+      idx2val( $vbl, IP_ROUTE_MASK, undef, undef, );
 
-  $session->{$prefix}{ipRouteInfo} =
-    idx2val( $vbl, IP_ROUTE_INFO, undef, undef, );
+    $session->{$prefix}{ipRouteInfo} =
+      idx2val( $vbl, IP_ROUTE_INFO, undef, undef, );
 
-  $session->{$prefix}{__initialized}++;
+    $session->{$prefix}{__initialized}++;
 }
 
 unless ( caller() ) {
-  print "$prefix compiles and initializes successful.\n";
+    print "$prefix compiles and initializes successful.\n";
 }
 
 =head1 SEE ALSO
@@ -359,7 +370,7 @@ Karl Gaissmaier <karl.gaissmaier at uni-ulm.de>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2008 Karl Gaissmaier, all rights reserved.
+Copyright 2008-2011 Karl Gaissmaier, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

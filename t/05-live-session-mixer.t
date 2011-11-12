@@ -35,8 +35,8 @@ SKIP: {
   isa_ok( $session, 'Net::SNMP' );
 
   isa_ok( $session->mixer('Net::SNMP::Mixin::IpRouteTable'), 'Net::SNMP' );
-  ok( $session->can('get_ip_route_entries'),
-    'can $session->get_ip_route_entries' );
+  ok( $session->can('get_ip_route_table'),
+    'can $session->get_ip_route_table' );
 
 
   eval { $session->init_mixins };
@@ -60,8 +60,8 @@ SKIP: {
   );
 
   my ($ip_route_table);
-  eval { $ip_route_table = $session->get_ip_route_entries };
-  ok( !$@, 'get_ip_route_entries' );
+  eval { $ip_route_table = $session->get_ip_route_table };
+  ok( !$@, 'get_ip_route_table' );
 
   undef $session;
 
@@ -77,8 +77,8 @@ SKIP: {
   isa_ok( $session, 'Net::SNMP' );
 
   isa_ok( $session->mixer('Net::SNMP::Mixin::IpRouteTable'), 'Net::SNMP' );
-  ok( $session->can('get_ip_route_entries'),
-    'can $session->get_ip_route_entries' );
+  ok( $session->can('get_ip_route_table'),
+    'can $session->get_ip_route_table' );
 
   eval { $session->init_mixins };
   snmp_dispatcher();
@@ -88,8 +88,8 @@ SKIP: {
   snmp_dispatcher();
   ok( !$@, 'already initalized but reload forced' );
 
-  eval { $ip_route_table = $session->get_ip_route_entries };
-  ok( !$@, 'get_ip_route_entries' );
+  eval { $ip_route_table = $session->get_ip_route_table };
+  ok( !$@, 'get_ip_route_table' );
 
   undef $session;
 
@@ -106,8 +106,8 @@ SKIP: {
   isa_ok( $session, 'Net::SNMP' );
 
   isa_ok( $session->mixer('Net::SNMP::Mixin::IpRouteTable'), 'Net::SNMP' );
-  ok( $session->can('get_ip_route_entries'),
-    'can $session->get_ip_route_entries' );
+  ok( $session->can('get_ip_route_table'),
+    'can $session->get_ip_route_table' );
 
   eval { $session->init_mixins };
   like(
@@ -116,7 +116,7 @@ SKIP: {
     'No response from remote host'
   );
 
-  eval { $ip_route_table = $session->get_ip_route_entries };
+  eval { $ip_route_table = $session->get_ip_route_table };
   like( $@, qr/not initialized/, 'not initialized' );
 
   undef $session;
@@ -135,8 +135,8 @@ SKIP: {
   isa_ok( $session, 'Net::SNMP' );
 
   isa_ok( $session->mixer('Net::SNMP::Mixin::IpRouteTable'), 'Net::SNMP' );
-  ok( $session->can('get_ip_route_entries'),
-    'can $session->get_ip_route_entries' );
+  ok( $session->can('get_ip_route_table'),
+    'can $session->get_ip_route_table' );
 
 
   eval { $session->init_mixins };
@@ -147,7 +147,7 @@ SKIP: {
     'No response from remote host'
   );
 
-  eval { $ip_route_table = $session->get_ip_route_entries };
+  eval { $ip_route_table = $session->get_ip_route_table };
   like( $@, qr/not initialized/, 'not initialized' );
 
 }
